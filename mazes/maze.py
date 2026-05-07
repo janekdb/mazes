@@ -1,6 +1,5 @@
 import random
 
-
 class Maze:
     """A maze is represented by a graph where edges can exist between adjacent nodes
     A node is adjacent to another node when the nodes are arranged on a rectangular grid.
@@ -63,67 +62,6 @@ class Maze:
                     links.add((cell_1, cell_2))
 
         return links
-
-def print_corner():
-    print('+', end='')
-
-def _print_horiz_wall():
-    print('---', end='')
-
-def _print_missing_horiz_wall():
-    print('   ', end='')
-
-def _print_vert_wall():
-    print('|', end='')
-
-def _print_missing_vert_wall():
-    print(' ', end='')
-
-def _print_cell():
-    print('   ', end='')
-
-# class MazeRenderer:
-#
-#     @staticmethod
-def render(maze):
-    links = maze.get_linked_cells()
-    links = [set(link) for link in links]
-    # for link in links:
-    #     print(link)
-
-    size = maze.size
-    horizontal = '+---' * size + '+'
-    vertical = '|   ' * size + '|'
-    print(horizontal)
-    for row in range(size):
-        if row > 0:
-            for col in range(size):
-                # Add a horizontal wall unless this cell links to the cell below
-                print_corner()
-                cell = (row, col)
-                above_cell = (row - 1, col)
-                link = {cell, above_cell}
-                # print(f'Testing {link} -> {link in links}')
-                if link in links:
-                    _print_missing_horiz_wall()
-                else:
-                    _print_horiz_wall()
-            print_corner()
-            print()
-        _print_vert_wall()
-        for col in range(size):
-            # Add a vertical wall unless this cell links to the cell to the right
-            _print_cell()
-            cell = (row, col)
-            right_cell = (row, col + 1)
-            link = {cell, right_cell}
-            if link in links:
-                _print_missing_vert_wall()
-            else:
-                _print_vert_wall()
-        print()
-
-    print(horizontal)
 
 def _shuffled_directions():
     directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
