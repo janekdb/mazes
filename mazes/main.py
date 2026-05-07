@@ -1,4 +1,6 @@
-from maze import Maze, generate, render
+from pathlib import Path
+from maze import Maze, generate
+from render import render, render_svg
 
 if False:
     m = Maze(5)
@@ -21,8 +23,15 @@ if False:
 
     render(m)
 
-m = generate(5)
-render(m)
+use_svg = True
+
+m = generate(20)
+
+if use_svg:
+    svg = render_svg(m)
+    Path("maze.svg").write_text(svg)
+else:
+    render(m)
 
 # for t in range(1000):
 #     print(f'Maze #{t+1}')
