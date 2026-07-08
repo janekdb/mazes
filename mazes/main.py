@@ -1,39 +1,114 @@
 from pathlib import Path
-from maze import Maze, generate
-from render import render, render_svg
+import sys
+import time
+from mazes.maze import generate
+from mazes.render import render, render_frame, render_svg
+from mazes.solve import solve
+from mazes.solve import solve_steps
+from mazes.solve import solve_astar_steps
 
-if False:
-    m = Maze(5)
+def main():
+    render_mode = "gif"
 
-    m.link_cells((0, 0), (0, 1))
-    m.link_cells((0, 1), (0, 2))
-    m.link_cells((0, 2), (0, 3))
-    m.link_cells((0, 3), (1, 3))
-    m.link_cells((1, 3), (2, 3))
-    m.link_cells((2, 3), (3, 3))
-    m.link_cells((3, 3), (3, 4))
-    m.link_cells((3, 4), (4, 4))
+    snapshots = generate(30)
 
-    render(m)
+    if render_mode == "svg":
+        frames_dir = Path("frames")
+        frames_dir.mkdir(exist_ok=True)
+        for old in frames_dir.glob("maze-*.svg"):
+            old.unlink()
+        for i, snapshot in enumerate(snapshots):
+            svg = render_svg(snapshot)
+            Path(f"frames/maze-{i:04d}.svg").write_text(svg)
 
-    m.link_cells((0, 1), (1, 1))
-    m.link_cells((1, 1), (2, 1))
-    m.link_cells((2, 1), (3, 1))
-    m.link_cells((3, 1), (3, 0))
+    elif render_mode == "text":
+        # CLEAR = '\033[2J\033[H'  # clear screen + home cursor
+        CLEAR = "\033[2J\033[H"  # clear screen + home cursor
+        for snapshot in snapshots:
+            sys.stdout.write(CLEAR)
+            render(snapshot)
+            time.sleep(0.05)
 
-    render(m)
+    elif render_mode == "gif":
+        out = Path("maze.gif")
+        out.unlink(missing_ok=True)
+        # frames = [render_frame(snap) for snap in snapshots]
+        frames = []
+        for snap in snapshots:
+            frames.append(render_frame(snap))
+        maze_build_frames_len = len(frames)
+        maze = snap  # after the loop, snap is the fully-generated maze
 
-use_svg = True
+        # gen = solve_steps(maze, (0, 0), (maze.size - 1, maze.size - 1))
+        gen = solve_astar_steps(maze, (0, 0), (maze.size - 1, maze.size - 1))
+        try:
+            while True:
+                visited, frontier, current = next(gen)
+                frames.append(
+                    render_frame(maze, visited=visited, frontier=frontier, current=current)
+                )
+        except StopIteration as stop:
+            path = stop.value
+        maze_search_frames_len = len(frames) - maze_build_frames_len
 
-m = generate(20)
+        # path = solve(maze, (0, 0), (maze.size - 1, maze.size - 1))
+        frames += [render_frame(maze, path=path[:i]) for i in range(2, len(path) + 1)]
+        maze_solve_frames = len(frames) - maze_build_frames_len - maze_search_frames_len
 
-if use_svg:
-    svg = render_svg(m)
-    Path("maze.svg").write_text(svg)
-else:
-    render(m)
+        durations = [
+            5000,
+            *[5] * (maze_build_frames_len - 2),
+            2000,
+            *[80] * (maze_search_frames_len - 1),
+            2000,
+            *[120] * (maze_solve_frames - 1),
+            5000,
+        ]
 
-# for t in range(1000):
-#     print(f'Maze #{t+1}')
-#     m = generate(6)
-#     render(m)
+        assert len(durations) == len(frames)
+
+        frames[0].save(
+            out,
+            save_all=True,
+            append_images=frames[1:],
+            duration=durations,
+            loop=0,
+            optimize=True,
+        )
+
+    # Pre-flood fill
+    if False and render_mode == "gif":
+        out = Path("maze.gif")
+        out.unlink(missing_ok=True)
+        # frames = [render_frame(snap) for snap in snapshots]
+        frames = []
+        for snap in snapshots:
+            frames.append(render_frame(snap))
+        maze_build_frames = len(frames)
+        maze = snap  # after the loop, snap is the fully-generated maze
+
+        path = solve(maze, (0, 0), (maze.size - 1, maze.size - 1))
+        frames += [render_frame(maze, path=path[:i]) for i in range(2, len(path) + 1)]
+        maze_solve_frames = len(frames) - maze_build_frames
+
+        durations = [
+            5000,
+            *[20] * (maze_build_frames - 2),
+            2000,
+            *[80] * (maze_solve_frames - 1),
+            5000,
+        ]
+
+        assert len(durations) == len(frames)
+
+        frames[0].save(
+            out,
+            save_all=True,
+            append_images=frames[1:],
+            duration=durations,
+            loop=0,
+            optimize=True,
+        )
+
+if __name__ == "__main__":
+    main()
