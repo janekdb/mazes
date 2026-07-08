@@ -33,12 +33,23 @@ If the project is production code (deployed, generates revenue, has users, has a
 ## Output structure
 
 1. **Where you are** — one short paragraph summarising the file's current state, especially if reviewing the same file again (mention what landed since last time).
-2. **Bugs / correctness** — real defects only. One per bullet, with `file:line` citations. Skip this section if there are none.
+2. **Bugs / correctness** — real defects only. One per bullet, with `file:line` citations. Skip this section if there are none. Before calling this section clean, confirm the file parses and, if tests exist, run them — distinguish "I read it and it looks right" from "I ran it and it's green." Mid-edit syntax errors and cross-module import breaks are invisible to reading alone.
 3. **Style / language idioms** — a handful of items. For each, name the concept it would teach if changed. Don't enumerate exhaustively; pick the highest-signal three or four.
 4. **Refactor opportunity** — at most one named opportunity, with the language concept it exposes (generators, Protocol, dataclass, etc.) and a concrete code sketch.
 5. **Recommended next move** — one sentence. Bug fix first if there is one; otherwise the change with the highest learning payoff.
 
 Keep each section terse. The review should be readable in under a minute, not an essay.
+
+For a multi-file or whole-project review, add a cross-module pass before **Recommended next move**: import consistency, shared-model consumers, and architectural through-lines. The highest-value findings often live between files, not inside them.
+
+## Repeat reviews
+
+You will review the same file many times — treat it as a months-long relationship with an evolving repo, not a one-off.
+
+- Track what you already raised. A finding the user hasn't acted on → compress to one line (`Still open: render(m) undefined, maze.py:112`), don't re-explain it.
+- Never re-derive a refactor sketch you've already given — point back to it.
+- If an enrichment has been passed over twice, drop it; silence is a decision.
+- Maintain one running "north-star" next step across reviews — the backlog you're steering toward (e.g. frozenset → dataclass → packaging). **Recommended next move** should advance that arc unless the code has changed the priority. Continuity over novelty.
 
 ## The "concept lens"
 
@@ -57,7 +68,7 @@ Weak framings (avoid):
 - "Add docstrings" — unless the user is exploring documentation tooling.
 - "Use `enumerate` here" — fine to mention once if the user clearly hasn't seen it, but don't churn on basics they already use elsewhere in the file.
 
-If the user's memory or CLAUDE.md indicates which concepts they've already covered, prefer suggestions that introduce *new* ones over repeating familiar ground.
+If the user's memory or CLAUDE.md indicates which concepts they've already covered, prefer suggestions that introduce *new* ones over repeating familiar ground. Record concepts you've taught to project memory (a `concepts-covered` note) and consult it before proposing enrichment — so each review opens new ground instead of re-teaching generators a third time.
 
 ## What to skip
 
@@ -73,6 +84,8 @@ Don't suggest things that only make sense for production:
 ## Tone
 
 Match the user's exploring, low-stakes energy. The review is collaborative, not gatekeeping. Phrase enrichments as "you could try X, which would expose you to Y," not "you should X." Save imperatives for actual bugs. When you point out a bug, say so plainly; when you suggest a refactor, frame it as an option with a learning payoff.
+
+Verify third-party API behaviour before asserting it. A confidently wrong idiom teaches the wrong reflex — the one failure mode a learning review must avoid, and worse here than in production. If unsure, hedge or check rather than assert.
 
 ## Example (anchor)
 
@@ -94,3 +107,23 @@ A canonical output, condensed:
 >
 > ## Recommended next move
 > Fix the missing `break` first as a one-line commit; then the BFS solver gives the biggest visual payoff per line of code.
+
+## Example (follow-up review)
+
+A later pass over the same file — note the compression of a standing finding, the point-back instead of a re-sketch, and the north-star continuity:
+
+> ## Where you are
+> The `frozenset` edge-set landed — `link_cells` is a one-liner and the index helpers are gone. `solve_steps` streaming works; tests green (`pytest` passes 8/8).
+>
+> ## Bugs / correctness
+> - Still open: `render(m)` undefined, `maze.py:112` — one-line fix, flagged twice now.
+>
+> ## Style / language idioms
+> - Duplicate `_fill_cell` (`render.py:124-132`): commented draft beside the live copy.
+> - New this pass: `heapq` with a `count()` tie-breaker is the idiomatic priority-queue form — good.
+>
+> ## Refactor opportunity
+> Unchanged — the `RenderStyle` dataclass sketch from the last review still stands; take it when the signature bites. (No re-derivation; the prior sketch is the reference.)
+>
+> ## Recommended next move
+> Fix the standing `render(m)` line, then continue the north-star arc toward packaging (`python -m`, `__main__`) — the biggest gap the project hasn't closed.
