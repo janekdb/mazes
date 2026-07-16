@@ -140,3 +140,43 @@ def generate(size):
 
     # print(f'backtracks: {backtracks}')
     # return m
+
+def _all_walls(size):
+    """Every adjacent cell pair, each one (east + south neighbours)"""
+    for r in range(size):
+        for c in range(size):
+            if c + 1 < size:
+                yield (r, c), (r, c + 1)
+            if r + 1 < size:
+                yield (r, c), (r + 1, c)
+
+def generate_kruskal(size):
+    """Kruskal assembled:
+       Kruskal's insight: shuffle all possible walls, and open each one only if its two cells are in different regions
+       (opening it would connect them without making a loop).
+       Stop when everything's one region — that's a spanning tree, i.e. a perfect maze.
+       Union by rank/size — track each root's tree size and always attach the smaller under the larger.
+       Combined with path compression it gives the optimal α(n) bound. A good "make it textbook-optimal" second pass.
+    """
+    m = Maze(size)
+    yield m
+    parent = {(r, c): (r, c) for r in range(size) for c in range(size)}
+    tree_size = {(r, c): 1 for r in range(size) for c in range(size)}
+
+    def find(cell):
+        while parent[cell] != cell:
+            parent[cell] = parent[parent[cell]] # path compression by path halving
+            cell = parent[cell]
+        return cell
+
+    walls = list(_all_walls(size))
+    random.shuffle(walls)
+    for a, b in walls:
+        ra, rb = find(a), find(b)
+        if ra != rb: # different region → safe to open as no cycle will be created
+            if tree_size[ra] > tree_size[rb]:
+                ra, rb = rb, ra # make ra the smaller root
+            parent[ra] = rb # union by attaching smaller under larger
+            tree_size[rb] += tree_size[ra] # rb's tree grew by ra's cells
+            m.link_cells(a, b)
+            yield m # snapshot for the animation

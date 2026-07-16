@@ -1,5 +1,6 @@
 import pytest
-from mazes.maze import Maze
+from mazes.maze import Maze, generate_kruskal
+from mazes.solve import adjacency
 
 
 def test_allows_valid_edges():
@@ -38,6 +39,26 @@ def test_get_linked_cells():
 
     assert actual == expected, f"Expected {expected}, got {actual}"
 
+# Verify it's actually a perfect maze
+#
+# A nice differential test using what you already have: a perfect maze on N² cells has
+# exactly N²−1 open walls and is fully connected.
+
+def _reachable(adj, start):
+    seen, stack = {start}, [start]
+    while stack:
+        for nb in adj.get(stack.pop(), ()):
+            if nb not in seen:
+                seen.add(nb)
+                stack.append(nb)
+    return seen
+
+def test_kruskal_is_spanning_tree():
+    m = list(generate_kruskal(5))[-1] # exhaust generator, take final maze
+    cells = {(r,c) for r in range(5) for c in range(5)}
+    adj = adjacency(m)
+    assert _reachable(adj, (0, 0)) == cells # Connected: reaches all 25
+    assert len(m.edges) == 24 # exactly V-1 edge
 
 # # test_matrix.py
 # import pytest

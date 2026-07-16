@@ -1,7 +1,7 @@
 from pathlib import Path
 import sys
 import time
-from mazes.maze import generate
+from mazes.maze import generate, generate_kruskal
 from mazes.render import render, render_frame, render_svg
 from mazes.solve import solve
 from mazes.solve import solve_steps
@@ -9,8 +9,13 @@ from mazes.solve import solve_astar_steps
 
 def main():
     render_mode = "gif"
+    generate_mode = "kruskal"
+    size = 10
 
-    snapshots = generate(30)
+    if generate_mode == "kruskal":
+        snapshots = generate_kruskal(size)
+    elif generate_mode == "backtracker":
+        snapshots = generate(20)
 
     if render_mode == "svg":
         frames_dir = Path("frames")
@@ -57,9 +62,9 @@ def main():
 
         durations = [
             5000,
-            *[5] * (maze_build_frames_len - 2),
+            *[2] * (maze_build_frames_len - 2),
             2000,
-            *[80] * (maze_search_frames_len - 1),
+            *[40] * (maze_search_frames_len - 1),
             2000,
             *[120] * (maze_solve_frames - 1),
             5000,
