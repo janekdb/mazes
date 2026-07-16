@@ -1,6 +1,10 @@
 # TODO
 
--> Implement A. Solve the maze
+DONE: Implement A. Solve the maze
+When using Kruskal's algorithm for maze construction colour each disjoint set
+  differently. This will show smaller tree being added under larger.
+When solving, a frontier cell which is entirely enclosed by visited cells
+  does not need to be extends as there is no path to the goal. Implement this.
 
 # Details 
 Three candidate next directions                                                                                                                                                                                                                   
