@@ -9,13 +9,13 @@ from mazes.solve import solve_astar_steps
 
 def main():
     render_mode = "gif"
-    generate_mode = "kruskal"
+    generate_mode = "backtracker"
     size = 10
 
     if generate_mode == "kruskal":
         snapshots = generate_kruskal(size)
     elif generate_mode == "backtracker":
-        snapshots = generate(20)
+        snapshots = generate(size)
 
     if render_mode == "svg":
         frames_dir = Path("frames")

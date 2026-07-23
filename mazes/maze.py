@@ -97,7 +97,7 @@ def _in_range(cell, size):
 def generate(size):
     """Generate a maze from a random walk"""
     m = Maze(size)
-    yield m
+    yield m, None
     current = (0, 0)
     visited = {current}
     trail = [current]
@@ -125,7 +125,7 @@ def generate(size):
             current = next_cell
             visited.add(current)
             trail.append(current)
-            yield m
+            yield m, None
         elif len(trail) == 1:
             # render(m)
             print(f"current: {current}")
