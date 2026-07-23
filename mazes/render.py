@@ -1,3 +1,4 @@
+import colorsys
 from dataclasses import dataclass
 from itertools import pairwise
 from PIL import Image, ImageDraw
@@ -128,13 +129,19 @@ def _fill_cell(draw, cell, cell_size, colour):
     x0, y0 = c * cell_size, r * cell_size
     draw.rectangle((x0, y0, x0 + cell_size, y0 + cell_size), fill=colour)
 
-# def _endcap(draw, cell, cell_size, colour, radius):
-#     cx, cy = _cell_centre(cell, cell_size)
-#     draw.ellipse((cx - radius, cy - radius, cx + radius, cy + radius), fill=colour)
-
 def _endcap(draw, cell, cell_size, colour, radius):
     cx, cy = _cell_centre(cell, cell_size)
     draw.ellipse((cx - radius, cy - radius, cx + radius, cy + radius), fill=colour)
+
+# To make a component's colour stable across its whole life, key the palette on the root's original
+# grid index rather than assigning colours in encounter order (which would shift as merges happen):
+# Since a surviving root never changes identity, its hue is fixed for its lifetime — no flicker.
+# Teaches: colorsys and generating N perceptually-spread colours from the HSV wheel.
+
+def _hue_for(root, size):
+    idx = root[0] * size + root[1]
+    r, g, b = colorsys.hsv_to_rgb(idx/(size * size), 0.55, 0.90)
+    return int(r * 255), int(g * 255), int(b * 255)
 
 @dataclass(frozen=True)
 class RenderStyle:
@@ -155,6 +162,9 @@ def render_frame(
     visited=None,
     frontier=None,
     current=None,
+    # An optional dict from cell to the cell which is the identity of the component the cell is in.
+    # Present when Kruskal is generating the maze.
+    cell_set_lookup=None
 ):
     size = maze.size
     extent = style.cell_size * size
@@ -166,6 +176,13 @@ def render_frame(
         _fill_cell(draw, cell, style.cell_size, style.frontier_fill)
     if current is not None:
         _fill_cell(draw, current, style.cell_size, style.current_fill)
+
+    if cell_set_lookup:
+        cells = [(row, col) for row in range(size) for col in range(size)]
+        for cell in cells:
+            component = cell_set_lookup[cell]
+            colour = _hue_for(component, size)
+            _fill_cell(draw, cell, style.cell_size, colour)
 
     for seg in iter_walls(maze, style.cell_size):
         draw.line(seg, fill=style.stroke, width=style.width)

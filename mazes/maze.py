@@ -158,16 +158,23 @@ def generate_kruskal(size):
        Union by rank/size — track each root's tree size and always attach the smaller under the larger.
        Combined with path compression it gives the optimal α(n) bound. A good "make it textbook-optimal" second pass.
     """
-    m = Maze(size)
-    yield m
+
     parent = {(r, c): (r, c) for r in range(size) for c in range(size)}
     tree_size = {(r, c): 1 for r in range(size) for c in range(size)}
 
     def find(cell):
+        """Identify the set this cell belong to"""
         while parent[cell] != cell:
             parent[cell] = parent[parent[cell]] # path compression by path halving
             cell = parent[cell]
         return cell
+
+    def roots():
+        """Snapshot cell -> current root for the whole grid"""
+        return {cell: find(cell) for cell in parent}
+
+    m = Maze(size)
+    yield m, roots()
 
     walls = list(_all_walls(size))
     random.shuffle(walls)
@@ -179,4 +186,4 @@ def generate_kruskal(size):
             parent[ra] = rb # union by attaching smaller under larger
             tree_size[rb] += tree_size[ra] # rb's tree grew by ra's cells
             m.link_cells(a, b)
-            yield m # snapshot for the animation
+            yield m, roots() # snapshot for the animation

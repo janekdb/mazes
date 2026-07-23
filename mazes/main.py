@@ -39,8 +39,8 @@ def main():
         out.unlink(missing_ok=True)
         # frames = [render_frame(snap) for snap in snapshots]
         frames = []
-        for snap in snapshots:
-            frames.append(render_frame(snap))
+        for snap, cell_set_lookup in snapshots:
+            frames.append(render_frame(snap, cell_set_lookup=cell_set_lookup))
         maze_build_frames_len = len(frames)
         maze = snap  # after the loop, snap is the fully-generated maze
 
