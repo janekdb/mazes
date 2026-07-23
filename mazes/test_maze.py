@@ -54,7 +54,7 @@ def _reachable(adj, start):
     return seen
 
 def test_kruskal_is_spanning_tree():
-    m = list(generate_kruskal(5))[-1] # exhaust generator, take final maze
+    m, _ = list(generate_kruskal(5))[-1] # exhaust generator, take final maze
     cells = {(r,c) for r in range(5) for c in range(5)}
     adj = adjacency(m)
     assert _reachable(adj, (0, 0)) == cells # Connected: reaches all 25

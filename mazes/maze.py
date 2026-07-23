@@ -94,7 +94,7 @@ def _in_range(cell, size):
     return all(0 <= p < size for p in cell)
 
 
-def generate(size):
+def generate_backtracker(size):
     """Generate a maze from a random walk"""
     m = Maze(size)
     yield m, None

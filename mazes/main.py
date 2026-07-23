@@ -1,7 +1,7 @@
 from pathlib import Path
 import sys
 import time
-from mazes.maze import generate, generate_kruskal
+from mazes.maze import generate_backtracker, generate_kruskal
 from mazes.render import render, render_frame, render_svg
 from mazes.solve import solve
 from mazes.solve import solve_steps
@@ -15,7 +15,7 @@ def main():
     if generate_mode == "kruskal":
         snapshots = generate_kruskal(size)
     elif generate_mode == "backtracker":
-        snapshots = generate(size)
+        snapshots = generate_backtracker(size)
 
     if render_mode == "svg":
         frames_dir = Path("frames")
