@@ -53,12 +53,24 @@ def _reachable(adj, start):
                 stack.append(nb)
     return seen
 
-def test_kruskal_is_spanning_tree():
-    m, _ = list(generate_kruskal(5))[-1] # exhaust generator, take final maze
-    cells = {(r,c) for r in range(5) for c in range(5)}
+def _test_is_spanning_tree(m, size):
+    cells = {(r,c) for r in range(size) for c in range(size)}
     adj = adjacency(m)
     assert _reachable(adj, (0, 0)) == cells # Connected: reaches all 25
-    assert len(m.edges) == 24 # exactly V-1 edge
+    assert len(m.edges) == size * size - 1 # exactly V-1 edge
+
+add backtracker
+
+def test_kruskal_is_spanning_tree():
+    size = 5
+    m, _ = list(generate_kruskal(size))[-1] # exhaust generator, take final maze
+    _test_is_spanning_tree(m, size)
+
+def test_binary_tree_is_spanning_tree():
+    size = 5
+    m, _ = list(generate_kruskal(size))[-1]  # exhaust generator, take final maze
+    _test_is_spanning_tree(m, size)
+
 
 # # test_matrix.py
 # import pytest
