@@ -187,3 +187,18 @@ def generate_kruskal(size):
             tree_size[rb] += tree_size[ra] # rb's tree grew by ra's cells
             m.link_cells(a, b)
             yield m, roots() # snapshot for the animation
+
+def generate_binary_tree(size):
+    """For each cell, carve north or east - whichever exists"""
+    m = Maze(size)
+    yield m, None
+    for r in range(size):
+        for c in range(size):
+            neighbours = []
+            if r > 0:
+                neighbours.append((r - 1, c)) # north
+            if c < size - 1:
+                neighbours.append((r, c + 1)) # east
+            if neighbours:
+                m.link_cells((r, c), random.choice(neighbours))
+                yield m, None
