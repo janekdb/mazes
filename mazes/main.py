@@ -1,7 +1,9 @@
 from pathlib import Path
 import sys
 import time
-from mazes.maze import generate_backtracker, generate_kruskal
+from mazes.maze import generate_backtracker
+from mazes.maze import generate_binary_tree
+from mazes.maze import generate_kruskal
 from mazes.render import render, render_frame, render_svg
 from mazes.solve import solve
 from mazes.solve import solve_steps
@@ -9,13 +11,19 @@ from mazes.solve import solve_astar_steps
 
 def main():
     render_mode = "gif"
-    generate_mode = "backtracker"
-    size = 10
+    generate_mode = "kruskal"
+    solve_mode = "astar"
+    size = 80
+
+    maze_name = f"maze-{generate_mode}-{solve_mode}-{size}x{size}"
 
     if generate_mode == "kruskal":
         snapshots = generate_kruskal(size)
     elif generate_mode == "backtracker":
         snapshots = generate_backtracker(size)
+    elif generate_mode == "binary_tree":
+        snapshots = generate_binary_tree(size)
+
 
     if render_mode == "svg":
         frames_dir = Path("frames")
@@ -35,7 +43,7 @@ def main():
             time.sleep(0.05)
 
     elif render_mode == "gif":
-        out = Path("maze.gif")
+        out = Path(f"{maze_name}.gif")
         out.unlink(missing_ok=True)
         # frames = [render_frame(snap) for snap in snapshots]
         frames = []
@@ -45,7 +53,11 @@ def main():
         maze = snap  # after the loop, snap is the fully-generated maze
 
         # gen = solve_steps(maze, (0, 0), (maze.size - 1, maze.size - 1))
-        gen = solve_astar_steps(maze, (0, 0), (maze.size - 1, maze.size - 1))
+        if solve_mode == "astar":
+            gen = solve_astar_steps(maze, (0, 0), (maze.size - 1, maze.size - 1))
+        else:
+            raise ValueError(f"Unknown solve_mode: {solve_mode}")
+
         try:
             while True:
                 visited, frontier, current = next(gen)
@@ -62,7 +74,12 @@ def main():
 
         durations = [
             5000,
-            *[2] * (maze_build_frames_len - 2),
+            # GIF delays are stored in centiseconds (10ms units); anything
+            # below 10ms rounds to 0, which decoders treat as "undefined" and
+            # replace with their own default (ffmpeg carries the previous delay
+            # forward — here the 5000ms intro — bloating the video). 20ms (2cs)
+            # is the practical floor and matches ffmpeg's default min_delay.
+            *[40] * (maze_build_frames_len - 2),
             2000,
             *[40] * (maze_search_frames_len - 1),
             2000,
@@ -70,7 +87,13 @@ def main():
             5000,
         ]
 
+        print(f"Durations length: {len(durations)}")
+        print(f"Frames length: {len(frames)}")
+
         assert len(durations) == len(frames)
+
+        # for duration in durations:
+        #     print(duration)
 
         frames[0].save(
             out,
