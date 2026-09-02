@@ -12,3 +12,14 @@ dependencies = [
 dev = [
     "ruff>=0.15.15",
 ]
+[project.scripts]
+maze = "mazes.main:main"
+
+# A build backend makes this a *packaged* project: uv/pip can build it into a
+# wheel and install it, which is what generates the `maze` launcher from
+# [project.scripts]. hatchling is a widely-used, backend-agnostic choice —
+# `requires` lists what's needed to build; `build-backend` names the importable
+# object that does it.
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
