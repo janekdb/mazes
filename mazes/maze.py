@@ -1,7 +1,19 @@
 import random
+from dataclasses import dataclass
+from collections.abc import Mapping
 
 Cell = tuple[int, int]
 
+@dataclass(frozen=True)
+class GenStep:
+    maze: Maze
+    # backtracker fields
+    visited: frozenset[Cell] | None = None
+    current: Cell | None = None
+    stack: tuple[Cell, ...] | None = None
+    phase: str | None = None
+    # kruskal field
+    cell_set_lookup: Mapping[Cell, Cell] | None = None
 
 class Maze:
     """A maze is represented by a graph where edges can exist between adjacent nodes
@@ -97,7 +109,7 @@ def _in_range(cell, size):
 def generate_backtracker(size):
     """Generate a maze from a random walk"""
     m = Maze(size)
-    yield m, None
+    yield GenStep(m)
     current = (0, 0)
     visited = {current}
     trail = [current]
@@ -125,7 +137,8 @@ def generate_backtracker(size):
             current = next_cell
             visited.add(current)
             trail.append(current)
-            yield m, None
+            yield GenStep(m, visited=frozenset(visited), current=current, stack=tuple(trail), phase="advance")
+
         elif len(trail) == 1:
             # render(m)
             print(f"current: {current}")
@@ -136,6 +149,7 @@ def generate_backtracker(size):
             # failed_cell = current
             current = trail[-1]
             backtracks += 1
+            yield GenStep(m, visited=frozenset(visited), current=current, stack=tuple(trail), phase="backtrack")
             # print(f'Backtracked from {failed_cell} to {current}')
 
     # print(f'backtracks: {backtracks}')
@@ -162,7 +176,7 @@ def generate_kruskal(size):
     parent = {(r, c): (r, c) for r in range(size) for c in range(size)}
     tree_size = {(r, c): 1 for r in range(size) for c in range(size)}
 
-    def find(cell):
+    def find(cell: Cell) -> Cell:
         """Identify the set this cell belong to"""
         while parent[cell] != cell:
             parent[cell] = parent[parent[cell]] # path compression by path halving
@@ -174,7 +188,7 @@ def generate_kruskal(size):
         return {cell: find(cell) for cell in parent}
 
     m = Maze(size)
-    yield m, roots()
+    yield GenStep(m, cell_set_lookup=roots())
 
     walls = list(_all_walls(size))
     random.shuffle(walls)
@@ -186,7 +200,8 @@ def generate_kruskal(size):
             parent[ra] = rb # union by attaching smaller under larger
             tree_size[rb] += tree_size[ra] # rb's tree grew by ra's cells
             m.link_cells(a, b)
-            yield m, roots() # snapshot for the animation
+            # yield m, roots() # snapshot for the animation
+            yield GenStep(m, cell_set_lookup=roots()) # snapshot for the animation
 
 def generate_binary_tree(size):
     """For each cell, carve north or east - whichever exists"""

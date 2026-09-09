@@ -1,19 +1,36 @@
 from pathlib import Path
 import sys
 import time
+from dataclasses import replace
+from PIL import Image
 from mazes.maze import generate_backtracker
 from mazes.maze import generate_binary_tree
 from mazes.maze import generate_kruskal
-from mazes.render import render, render_frame, render_svg
+from mazes.maze import GenStep
+from mazes.render import render, render_frame, render_svg, RenderStyle
 from mazes.solve import solve
 from mazes.solve import solve_steps
 from mazes.solve import solve_astar_steps
 
+def _render_step(step: GenStep) -> Image.Image:
+    if step.phase == "backtrack":
+        style = replace(RenderStyle(), current_fill="black") # deepskyblue
+    else:
+        style = RenderStyle() # default: orange head
+    return render_frame(
+        step.maze,
+        style,
+        visited=step.visited,
+        current=step.current,
+        path=step.stack,
+        cell_set_lookup=step.cell_set_lookup,
+    )
+
 def main():
     render_mode = "gif"
-    generate_mode = "kruskal"
+    generate_mode = "backtracker"
     solve_mode = "astar"
-    size = 80
+    size = 40
 
     maze_name = f"maze-{generate_mode}-{solve_mode}-{size}x{size}"
 
@@ -23,7 +40,6 @@ def main():
         snapshots = generate_backtracker(size)
     elif generate_mode == "binary_tree":
         snapshots = generate_binary_tree(size)
-
 
     if render_mode == "svg":
         frames_dir = Path("frames")
@@ -47,10 +63,20 @@ def main():
         out.unlink(missing_ok=True)
         # frames = [render_frame(snap) for snap in snapshots]
         frames = []
-        for snap, cell_set_lookup in snapshots:
-            frames.append(render_frame(snap, cell_set_lookup=cell_set_lookup))
+        for step in snapshots:
+            frame = _render_step(step)
+            frames.append(frame)
+            # frames.append(
+            #     render_frame(
+            #         step.maze,
+            #         visited=step.visited,
+            #         current=step.current,
+            #         path=step.stack,
+            #         cell_set_lookup=step.cell_set_lookup,
+            #     )
+            # )
         maze_build_frames_len = len(frames)
-        maze = snap  # after the loop, snap is the fully-generated maze
+        maze = step.maze  # after the loop, step.maze is the fully-generated maze
 
         # gen = solve_steps(maze, (0, 0), (maze.size - 1, maze.size - 1))
         if solve_mode == "astar":
