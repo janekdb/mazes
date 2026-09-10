@@ -16,7 +16,7 @@ def _render_step(step: GenStep) -> Image.Image:
     """Adapt a GenStep to render_frame, choosing colours from the phase."""
     if step.phase == "dead_end":
         # brighter flash the instant the dead end is recognised
-        style = replace(RenderStyle(), current_fill="red", doomed_fill="orchid")
+        style = replace(RenderStyle(), current_fill="red", doomed_fill="red") # doomed_fill="orchid"
     elif step.phase == "backtrack":
         style = replace(RenderStyle(), current_fill="black") # deepskyblue
     else:
@@ -28,6 +28,7 @@ def _render_step(step: GenStep) -> Image.Image:
         current=step.current,
         path=step.stack,
         doomed=step.doomed,
+        junction = step.junction,
         cell_set_lookup=step.cell_set_lookup,
     )
 
@@ -110,7 +111,7 @@ def main():
             # replace with their own default (ffmpeg carries the previous delay
             # forward — here the 5000ms intro — bloating the video). 20ms (2cs)
             # is the practical floor and matches ffmpeg's default min_delay.
-            *[200] * (maze_build_frames_len - 2),  # 40
+            *[40] * (maze_build_frames_len - 2),  # 40
             2000,
             *[40] * (maze_search_frames_len - 1),
             2000,
@@ -134,6 +135,8 @@ def main():
             loop=0,
             optimize=True,
         )
+
+    print(maze_name)
 
     # Pre-flood fill
     if False and render_mode == "gif":

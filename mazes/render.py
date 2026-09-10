@@ -143,6 +143,8 @@ def _hue_for(root, size):
     r, g, b = colorsys.hsv_to_rgb(idx/(size * size), 0.55, 0.90)
     return int(r * 255), int(g * 255), int(b * 255)
 
+ADVANCE_HEAD = "orange"
+
 @dataclass(frozen=True)
 class RenderStyle:
     cell_size: int = 20
@@ -152,8 +154,9 @@ class RenderStyle:
     path_stroke: str = "red"
     visited_fill: str = "lightblue"
     frontier_fill: str = "deepskyblue"
-    current_fill: str = "orange"
-    doomed_fill: str = "plum" # corridor about to be backtracked
+    current_fill: str = ADVANCE_HEAD
+    doomed_fill: str = ADVANCE_HEAD # "plum", moccasin
+    junction_fill: str = ADVANCE_HEAD
 
 def render_frame(
     maze,
@@ -164,6 +167,7 @@ def render_frame(
     frontier=None,
     current=None,
     doomed=None,
+    junction=None,
     # An optional dict from cell to the cell which is the identity of the component the cell is in.
     # Present when Kruskal is generating the maze.
     cell_set_lookup=None
@@ -180,6 +184,8 @@ def render_frame(
         _fill_cell(draw, cell, style.cell_size, style.frontier_fill)
     if current is not None:
         _fill_cell(draw, current, style.cell_size, style.current_fill)
+    if junction is not None:
+        _fill_cell(draw, junction, style.cell_size, style.junction_fill)
 
     if cell_set_lookup:
         cells = [(row, col) for row in range(size) for col in range(size)]

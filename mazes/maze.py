@@ -12,6 +12,7 @@ class GenStep:
     current: Cell | None = None
     stack: tuple[Cell, ...] | None = None
     doomed: frozenset[Cell] | None = None  # cells about to be backtracked
+    junction: Cell | None = None # cell where backtracking stops & carving resumes
     phase: str | None = None # "advance" | "dead_end" | "backtrack"
     # kruskal field
     cell_set_lookup: Mapping[Cell, Cell] | None = None
@@ -166,11 +167,13 @@ def generate_backtracker(size):
         else:
             # Dead end: trail[-1] has no unvisited neighbour.
             doomed = _doomed_segment(trail, visited, size)
+            # the cell _doomed_segment stopped at: one below the doomed run
+            junction = trail[-(len(doomed) + 1)] if len(doomed) < len(trail) else None
 
             # (1) flash: whole doomed corridor, head still on the dead end
             yield GenStep(m, visited=frozenset(visited), current=current,
                           stack=tuple(trail), doomed=frozenset(doomed),
-                          phase="dead_end")
+                          junction=junction, phase="dead_end")
 
             # (2) retreat: pop the doomed cells one at a time, highlight shrinking
             for i in range(len(doomed)):
@@ -181,7 +184,7 @@ def generate_backtracker(size):
                 current = trail[-1]
                 yield GenStep(m, visited=frozenset(visited), current=current,
                     stack=tuple(trail), doomed=frozenset(doomed[i + 1:]),
-                    phase="backtrack")
+                    junction=junction, phase="backtrack")
 
             # Why the pieces are where they are
 
