@@ -11,7 +11,8 @@ class GenStep:
     visited: frozenset[Cell] | None = None
     current: Cell | None = None
     stack: tuple[Cell, ...] | None = None
-    phase: str | None = None
+    doomed: frozenset[Cell] | None = None  # cells about to be backtracked
+    phase: str | None = None # "advance" | "dead_end" | "backtrack"
     # kruskal field
     cell_set_lookup: Mapping[Cell, Cell] | None = None
 
@@ -83,16 +84,17 @@ class Maze:
         #
         # return links
 
+DIRECTIONS = [(0, 1), (1, 0), (0, -1), (-1, 0)]   # E, S, W, N
 
 def _shuffled_directions():
-    directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+    directions = list(DIRECTIONS)
     random.shuffle(directions)
     return directions
 
 
 def _shuffled_directions_biased(last_followed_direction):
     """Prefer the last followed direction"""
-    directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+    directions = list(DIRECTIONS)
     # A higher chance of continuing the same direction
     directions.append(last_followed_direction)
     random.shuffle(directions)
@@ -105,6 +107,24 @@ def _shuffled_directions_biased(last_followed_direction):
 def _in_range(cell, size):
     return all(0 <= p < size for p in cell)
 
+def _has_unvisited_neighbour(cell, visited, size):
+    """True if any orthogonal neighbour of `cell` is not yet visited."""
+    r, c = cell
+    return any(
+        _in_range((r + dr, c + dc), size) and (r + dr, c + dc) not in visited
+        for dr, dc in DIRECTIONS
+    )
+
+def _doomed_segment(trail, visited, size):
+    """Cells abandoned on backtracking: the dead-end run from trail[-1] down to
+    (but not including) the nearest cell that still has an unvisited neighbour.
+    Returned dead-end-first, i.e. in pop order."""
+    segment = [trail[-1]]
+    for cell in reversed(trail[:-1]):
+        if _has_unvisited_neighbour(cell, visited, size):
+            break
+        segment.append(cell)
+    return segment
 
 def generate_backtracker(size):
     """Generate a maze from a random walk"""
@@ -144,12 +164,50 @@ def generate_backtracker(size):
             print(f"current: {current}")
             raise RuntimeError(f"Failed to find a path from {current}")
         else:
+            # Dead end: trail[-1] has no unvisited neighbour.
+            doomed = _doomed_segment(trail, visited, size)
+
+            # (1) flash: whole doomed corridor, head still on the dead end
+            yield GenStep(m, visited=frozenset(visited), current=current,
+                          stack=tuple(trail), doomed=frozenset(doomed),
+                          phase="dead_end")
+
+            # (2) retreat: pop the doomed cells one at a time, highlight shrinking
+            for i in range(len(doomed)):
+                trail.pop()
+                backtracks += 1
+                if not trail: # popped past the origin
+                    raise RuntimeError(f"Backtracked past origin from {current}")
+                current = trail[-1]
+                yield GenStep(m, visited=frozenset(visited), current=current,
+                    stack=tuple(trail), doomed=frozenset(doomed[i + 1:]),
+                    phase="backtrack")
+
+            # Why the pieces are where they are
+
+            # doomed[i + 1:] is the key line. After popping index i (which removed the cell at the top),
+            # the still-to-be-popped doomed cells are exactly the suffix doomed[i+1:]. So the highlight
+            # recedes in lockstep with the head: at the last iteration it's doomed[len:] = empty, and
+            # current has landed on the surviving junction. That's the "corridor peels away as the head
+            # retreats" effect, and it's driven entirely by the slice — no separate mutable "remaining"
+            # set to keep in sync.
+
+            # The flash frame (1) is the only one with current on the dead end. From iteration i=0 onward
+            # the head has already moved down. So (1) is what gives the viewer the beat of "recognized the
+            # dead end" before the retreat starts. If you'd rather skip the flash (Option B, persistent tint
+            # with no separate recognition beat), drop block (1) and start straight into the loop — the
+            # doomed set still shrinks correctly.
+
+            # Draw-order note for render_step: in the flash frame the dead-end cell is both current and in
+            # doomed. Fill doomed cells first, then the current head on top, so the head color wins on that
+            # overlap — otherwise the dead end reads as doomed rather than as the active cell.
+
             # Backtrack
-            trail.pop()
-            # failed_cell = current
-            current = trail[-1]
-            backtracks += 1
-            yield GenStep(m, visited=frozenset(visited), current=current, stack=tuple(trail), phase="backtrack")
+            # trail.pop()
+            # # failed_cell = current
+            # current = trail[-1]
+            # backtracks += 1
+            # yield GenStep(m, visited=frozenset(visited), current=current, stack=tuple(trail), phase="backtrack")
             # print(f'Backtracked from {failed_cell} to {current}')
 
     # print(f'backtracks: {backtracks}')

@@ -153,6 +153,7 @@ class RenderStyle:
     visited_fill: str = "lightblue"
     frontier_fill: str = "deepskyblue"
     current_fill: str = "orange"
+    doomed_fill: str = "plum" # corridor about to be backtracked
 
 def render_frame(
     maze,
@@ -162,6 +163,7 @@ def render_frame(
     visited=None,
     frontier=None,
     current=None,
+    doomed=None,
     # An optional dict from cell to the cell which is the identity of the component the cell is in.
     # Present when Kruskal is generating the maze.
     cell_set_lookup=None
@@ -172,6 +174,8 @@ def render_frame(
     draw = ImageDraw.Draw(img)
     for cell in visited or ():
         _fill_cell(draw, cell, style.cell_size, style.visited_fill)
+    for cell in doomed or ():
+        _fill_cell(draw, cell, style.cell_size, style.doomed_fill)
     for cell in frontier or ():
         _fill_cell(draw, cell, style.cell_size, style.frontier_fill)
     if current is not None:

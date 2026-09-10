@@ -13,7 +13,11 @@ from mazes.solve import solve_steps
 from mazes.solve import solve_astar_steps
 
 def _render_step(step: GenStep) -> Image.Image:
-    if step.phase == "backtrack":
+    """Adapt a GenStep to render_frame, choosing colours from the phase."""
+    if step.phase == "dead_end":
+        # brighter flash the instant the dead end is recognised
+        style = replace(RenderStyle(), current_fill="red", doomed_fill="orchid")
+    elif step.phase == "backtrack":
         style = replace(RenderStyle(), current_fill="black") # deepskyblue
     else:
         style = RenderStyle() # default: orange head
@@ -23,6 +27,7 @@ def _render_step(step: GenStep) -> Image.Image:
         visited=step.visited,
         current=step.current,
         path=step.stack,
+        doomed=step.doomed,
         cell_set_lookup=step.cell_set_lookup,
     )
 
@@ -30,7 +35,7 @@ def main():
     render_mode = "gif"
     generate_mode = "backtracker"
     solve_mode = "astar"
-    size = 40
+    size = 30
 
     maze_name = f"maze-{generate_mode}-{solve_mode}-{size}x{size}"
 
@@ -105,7 +110,7 @@ def main():
             # replace with their own default (ffmpeg carries the previous delay
             # forward — here the 5000ms intro — bloating the video). 20ms (2cs)
             # is the practical floor and matches ffmpeg's default min_delay.
-            *[40] * (maze_build_frames_len - 2),
+            *[200] * (maze_build_frames_len - 2),  # 40
             2000,
             *[40] * (maze_search_frames_len - 1),
             2000,
