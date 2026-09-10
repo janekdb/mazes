@@ -36,7 +36,7 @@ def main():
     render_mode = "gif"
     generate_mode = "backtracker"
     solve_mode = "astar"
-    size = 30
+    size = 10
 
     maze_name = f"maze-{generate_mode}-{solve_mode}-{size}x{size}"
 
@@ -72,15 +72,6 @@ def main():
         for step in snapshots:
             frame = _render_step(step)
             frames.append(frame)
-            # frames.append(
-            #     render_frame(
-            #         step.maze,
-            #         visited=step.visited,
-            #         current=step.current,
-            #         path=step.stack,
-            #         cell_set_lookup=step.cell_set_lookup,
-            #     )
-            # )
         maze_build_frames_len = len(frames)
         maze = step.maze  # after the loop, step.maze is the fully-generated maze
 

@@ -73,17 +73,6 @@ class Maze:
 
     def get_linked_cells(self):
         return self.edges
-        # links = set()
-        # for row_ix in range(len(self.adjacency)):
-        #     row = self.adjacency[row_ix]
-        #     for col_ix in range(row_ix, len(row)):
-        #         linked = row[col_ix]
-        #         if linked:
-        #             cell_1 = self.cell_from_index(row_ix)
-        #             cell_2 = self.cell_from_index(col_ix)
-        #             links.add((cell_1, cell_2))
-        #
-        # return links
 
 DIRECTIONS = [(0, 1), (1, 0), (0, -1), (-1, 0)]   # E, S, W, N
 
@@ -165,6 +154,7 @@ def generate_backtracker(size):
             print(f"current: {current}")
             raise RuntimeError(f"Failed to find a path from {current}")
         else:
+            # Backtrack
             # Dead end: trail[-1] has no unvisited neighbour.
             doomed = _doomed_segment(trail, visited, size)
             # the cell _doomed_segment stopped at: one below the doomed run
@@ -204,17 +194,6 @@ def generate_backtracker(size):
             # Draw-order note for render_step: in the flash frame the dead-end cell is both current and in
             # doomed. Fill doomed cells first, then the current head on top, so the head color wins on that
             # overlap — otherwise the dead end reads as doomed rather than as the active cell.
-
-            # Backtrack
-            # trail.pop()
-            # # failed_cell = current
-            # current = trail[-1]
-            # backtracks += 1
-            # yield GenStep(m, visited=frozenset(visited), current=current, stack=tuple(trail), phase="backtrack")
-            # print(f'Backtracked from {failed_cell} to {current}')
-
-    # print(f'backtracks: {backtracks}')
-    # return m
 
 def _all_walls(size):
     """Every adjacent cell pair, each one (east + south neighbours)"""
