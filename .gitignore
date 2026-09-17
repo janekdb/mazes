@@ -1,3 +1,4 @@
 mazes/frames/
 .idea/
 *.pyc
+.DS_Store

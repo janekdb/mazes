@@ -12,16 +12,72 @@ from mazes.solve import solve
 from mazes.solve import solve_steps
 from mazes.solve import solve_astar_steps
 
-def _render_step(step: GenStep) -> Image.Image:
+
+def _render_step(step: GenStep) -> list[Image.Image]:
     """Adapt a GenStep to render_frame, choosing colours from the phase."""
     if step.phase == "dead_end":
         # brighter flash the instant the dead end is recognised
-        style = replace(RenderStyle(), current_fill="magenta", doomed_fill="magenta") # doomed_fill="orchid"
+
+        # Current highlighted, doomed not highlighted, junction not highlighted
+        style = replace(RenderStyle(), current_fill="magenta") # doomed_fill="orchid"
+        f1 = render_frame(
+            step.maze,
+            style,
+            visited=step.visited,
+            current=step.current,
+            path=step.stack,
+            # doomed=step.doomed,
+            # junction = step.junction,
+            # cell_set_lookup=step.cell_set_lookup,
+        )
+
+        # Go black
+        style = replace(RenderStyle(), current_fill="black")  # doomed_fill="orchid" / magenta
+        f2 = render_frame(
+            step.maze,
+            style,
+            visited=step.visited,
+            current=step.current,
+            path=step.stack,
+            # doomed=step.doomed,
+            # junction = step.junction,
+            # cell_set_lookup=step.cell_set_lookup,
+        )
+
+        # Highlight
+        style = replace(RenderStyle(), current_fill="magenta") # doomed_fill="orchid"
+        f3 = render_frame(
+            step.maze,
+            style,
+            visited=step.visited,
+            current=step.current,
+            path=step.stack,
+            # doomed=step.doomed,
+            # junction = step.junction,
+            # cell_set_lookup=step.cell_set_lookup,
+        )
+
+        # Show doomed and junction
+        style = replace(RenderStyle(), current_fill="magenta", doomed_fill="magenta")  # doomed_fill="orchid"
+        f4 = render_frame(
+            step.maze,
+            style,
+            visited=step.visited,
+            current=step.current,
+            path=step.stack,
+            doomed=step.doomed,
+            junction = step.junction,
+            # cell_set_lookup=step.cell_set_lookup,
+        )
+
+        return [f1, f2, f3, f4]
+
     elif step.phase == "backtrack":
         style = replace(RenderStyle(), current_fill="black") # deepskyblue
     else:
         style = RenderStyle() # default: orange head
-    return render_frame(
+
+    frame = render_frame(
         step.maze,
         style,
         visited=step.visited,
@@ -32,10 +88,12 @@ def _render_step(step: GenStep) -> Image.Image:
         cell_set_lookup=step.cell_set_lookup,
     )
 
+    return [frame]
+
 # durations in ms, keyed by the frame's kind
 BUILD_PHASE_MS = {
     "advance":  80,
-    "dead_end": 1000,   # full-second flash on dead-end recognition
+    "dead_end": 250,   # full-second flash on dead-end recognition
     "backtrack": 40,
 }
 INTRO_MS = 5000
@@ -48,7 +106,7 @@ def main():
     render_mode = "gif"
     generate_mode = "backtracker"
     solve_mode = "astar"
-    size = 20
+    size = 10
 
     maze_name = f"maze-{generate_mode}-{solve_mode}-{size}x{size}"
 
@@ -84,9 +142,10 @@ def main():
 
         # build phase - duration comes straight from the phase
         for step in snapshots:
-            frame = _render_step(step)
+            frames = _render_step(step)
             duration = BUILD_PHASE_MS.get(step.phase)
-            timeline.append((frame, duration))
+            for frame in frames:
+                timeline.append((frame, duration))
         timeline[0] = (timeline[0][0], INTRO_MS) # hold the opening frame
         timeline[-1] = (timeline[-1][0], PRE_SOLVE_MS) # pause before search begins
 
