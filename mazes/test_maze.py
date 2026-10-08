@@ -1,5 +1,5 @@
 import pytest
-from mazes.maze import Maze, generate_kruskal
+from mazes.maze import Maze, generate_backtracker, generate_kruskal, generate_wilson
 from mazes.solve import adjacency
 
 
@@ -59,16 +59,24 @@ def _test_is_spanning_tree(m, size):
     assert _reachable(adj, (0, 0)) == cells # Connected: reaches all 25
     assert len(m.edges) == size * size - 1 # exactly V-1 edge
 
-add backtracker
-
 def test_kruskal_is_spanning_tree():
     size = 5
-    m, _ = list(generate_kruskal(size))[-1] # exhaust generator, take final maze
+    m, _ = list(generate_kruskal(size))[-1].maze # exhaust generator, take final maze
     _test_is_spanning_tree(m, size)
 
 def test_binary_tree_is_spanning_tree():
     size = 5
-    m, _ = list(generate_kruskal(size))[-1]  # exhaust generator, take final maze
+    m, _ = list(generate_kruskal(size))[-1].maze  # exhaust generator, take final maze
+    _test_is_spanning_tree(m, size)
+
+def test_backtracker_is_spanning_tree():
+    size = 5
+    m, _ = list(generate_backtracker(size))[-1].maze  # exhaust generator, take final maze
+    _test_is_spanning_tree(m, size)
+
+def test_wilson_is_spanning_tree():
+    size = 5
+    m, _ = list(generate_wilson(size))[-1].maze  # exhaust generator, take final maze
     _test_is_spanning_tree(m, size)
 
 

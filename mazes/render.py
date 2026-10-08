@@ -154,6 +154,7 @@ class RenderStyle:
     path_stroke: str = "red"
     visited_fill: str = "lightblue"
     frontier_fill: str = "deepskyblue"
+    carved_fill: str = "lime"
     current_fill: str = ADVANCE_HEAD
     doomed_fill: str = ADVANCE_HEAD # "plum", moccasin
     junction_fill: str = ADVANCE_HEAD
@@ -170,7 +171,10 @@ def render_frame(
     junction=None,
     # An optional dict from cell to the cell which is the identity of the component the cell is in.
     # Present when Kruskal is generating the maze.
-    cell_set_lookup=None
+    cell_set_lookup=None,
+    # An optional set containing cells which have been newly carved
+    # Present when Wilson is generating the maze
+    carved=None
 ):
     size = maze.size
     extent = style.cell_size * size
@@ -178,6 +182,8 @@ def render_frame(
     draw = ImageDraw.Draw(img)
     for cell in visited or ():
         _fill_cell(draw, cell, style.cell_size, style.visited_fill)
+    for cell in carved or ():
+        _fill_cell(draw, cell, style.cell_size, style.carved_fill)
     for cell in doomed or ():
         _fill_cell(draw, cell, style.cell_size, style.doomed_fill)
     for cell in frontier or ():

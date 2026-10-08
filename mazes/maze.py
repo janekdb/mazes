@@ -1,6 +1,7 @@
 import random
 from dataclasses import dataclass
 from collections.abc import Mapping
+from itertools import pairwise
 
 Cell = tuple[int, int]
 
@@ -16,6 +17,8 @@ class GenStep:
     phase: str | None = None # "advance" | "dead_end" | "backtrack"
     # kruskal field
     cell_set_lookup: Mapping[Cell, Cell] | None = None
+    # Wilson field: corridor to flash on commit
+    carved: frozenset[Cell] | None = None
 
 class Maze:
     """A maze is represented by a graph where edges can exist between adjacent nodes
@@ -130,6 +133,16 @@ def generate_backtracker(size):
         # directions = _shuffled_directions_biased(last_followed_direction)
         directions = _shuffled_directions()
         # print(f'current: {current}')
+
+        # TODO: Use this idiom
+        # next_cell = next(
+        #     (cand for dr, dc in directions
+        #      if _in_range((cand := (r + dr, c + dc)), size) and cand not in visited),
+        #     None,
+        # )
+        # if next_cell is not None:
+        #     m.link_cells(current, next_cell)
+
         found = False
         next_cell = None
         for direction in directions:
@@ -257,3 +270,80 @@ def generate_binary_tree(size):
             if neighbours:
                 m.link_cells((r, c), random.choice(neighbours))
                 yield m, None
+
+def _walk_path(direction_from, start, head):
+    path = [start]
+    c = start
+    while c != head and c in direction_from: # stop AT head - not just "no pointer"
+        dr, dc = direction_from[c]
+        c = (c[0] + dr, c[1] + dc)
+        path.append(c)
+    return path
+
+def generate_wilson(size):
+    m = Maze(size)
+    yield GenStep(m)
+
+    cells = [(r, c) for r in range(size) for c in range(size)]
+    in_tree = {random.choice(cells)} # seed the tree with one cell
+
+    while len(in_tree) < size * size:
+        # any cell outside the tree. Randomised for visual appeal.
+        start = random.choice([c for c in cells if c not in in_tree])
+        # start = next(c for c in cells if c not in in_tree)
+        direction_from = {} # the loop-erasure trick
+
+        # --- random walk until we hit the tree ---
+        cell = start
+        while cell not in in_tree:
+            yield GenStep(
+                m,
+                visited=frozenset(in_tree),
+                stack=tuple(_walk_path(direction_from, start, cell)),
+                current=cell,
+                phase="walk"
+            )
+            dr, dc = random.choice([
+                (dr, dc) for dr, dc in DIRECTIONS
+                if _in_range((cell[0] + dr, cell[1] + dc), size)
+            ])
+            direction_from[cell] = (dr, dc)  # overwrite — last exit wins
+            cell = (cell[0] + dr, cell[1] + dc)
+
+        # --- commit: carve the whole loop-erased path, then flash it ---
+        path = _walk_path(direction_from, start, cell)   # start → tree-contact
+        for a, b in pairwise(path):
+            m.link_cells(a, b)
+            in_tree.add(a)
+        # one bright beat on the freshly carved corridor
+        yield GenStep(
+            m,
+            visited=frozenset(in_tree),
+            stack=tuple(path),
+            carved=frozenset(path),
+            phase="commit",
+        )
+        #
+        # # --- commit: carve the loop-erased path into the tree, one edge per frame ---
+        # path = _walk_path(direction_from, start, cell)   # start → tree-contact cell
+        # for a, b in pairwise(path):
+        #     m.link_cells(a, b)
+        #     in_tree.add(a)
+        #     yield GenStep(
+        #         m,
+        #         visited=frozenset(in_tree),
+        #         current=b,
+        #         stack=tuple(path),          # whole committed corridor, highlighted
+        #         phase="commit",
+        #     )
+        #
+        # # --- retrace the loop-erased path and carve it ---
+        # cell = start
+        # while cell not in in_tree:
+        #     dr, dc = direction_from[cell]
+        #     nxt = (cell[0] + dr, cell[1] + dc)
+        #     m.link_cells(cell, nxt)
+        #     in_tree.add(cell)
+        #     cell = nxt
+
+    yield GenStep(m)  # placeholder: one final frame; real animation comes in stage 2
