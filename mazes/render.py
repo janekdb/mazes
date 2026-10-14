@@ -155,6 +155,7 @@ class RenderStyle:
     visited_fill: str = "lightblue"
     frontier_fill: str = "deepskyblue"
     carved_fill: str = "lime"
+    erased_fill: str = "black" # "cyan" # "magenta" # ADVANCE_HEAD # "white" # "orangered"
     current_fill: str = ADVANCE_HEAD
     doomed_fill: str = ADVANCE_HEAD # "plum", moccasin
     junction_fill: str = ADVANCE_HEAD
@@ -174,7 +175,9 @@ def render_frame(
     cell_set_lookup=None,
     # An optional set containing cells which have been newly carved
     # Present when Wilson is generating the maze
-    carved=None
+    carved=None,
+    # An optional set containing the loop about to be erased
+    erased=None
 ):
     size = maze.size
     extent = style.cell_size * size
@@ -192,6 +195,8 @@ def render_frame(
         _fill_cell(draw, current, style.cell_size, style.current_fill)
     if junction is not None:
         _fill_cell(draw, junction, style.cell_size, style.junction_fill)
+    for cell in erased or ():
+        _fill_cell(draw, cell, style.cell_size, style.erased_fill)
 
     if cell_set_lookup:
         cells = [(row, col) for row in range(size) for col in range(size)]

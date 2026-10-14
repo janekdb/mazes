@@ -19,6 +19,7 @@ class GenStep:
     cell_set_lookup: Mapping[Cell, Cell] | None = None
     # Wilson field: corridor to flash on commit
     carved: frozenset[Cell] | None = None
+    erased: frozenset[Cell] | None = None
 
 class Maze:
     """A maze is represented by a graph where edges can exist between adjacent nodes
@@ -296,19 +297,35 @@ def generate_wilson(size):
         # --- random walk until we hit the tree ---
         cell = start
         while cell not in in_tree:
+            path = _walk_path(direction_from, start, cell)
             yield GenStep(
                 m,
                 visited=frozenset(in_tree),
-                stack=tuple(_walk_path(direction_from, start, cell)),
+                stack=tuple(path),
                 current=cell,
                 phase="walk"
             )
+
             dr, dc = random.choice([
                 (dr, dc) for dr, dc in DIRECTIONS
                 if _in_range((cell[0] + dr, cell[1] + dc), size)
             ])
+            nxt = (cell[0] + dr, cell[1] + dc)
+
+            # stepping onto the path → loop erased
+            # loop of ≥4 cells:
+            if nxt in path and len(path) - path.index(nxt) - 1 >= 4:
+                i = path.index(nxt)
+                erased = path[i:]            # the loop: everything after nxt, incl. cell
+                yield GenStep(m,
+                              visited=frozenset(in_tree),
+                              stack=tuple(path + [nxt]),        # ← append pivot: closes the line + endcap on pivot        # full path still shown...
+                              erased=frozenset(erased),    # ...with the loop bursting
+                              current=cell,
+                              phase="erase")
+
             direction_from[cell] = (dr, dc)  # overwrite — last exit wins
-            cell = (cell[0] + dr, cell[1] + dc)
+            cell = nxt
 
         # --- commit: carve the whole loop-erased path, then flash it ---
         path = _walk_path(direction_from, start, cell)   # start → tree-contact

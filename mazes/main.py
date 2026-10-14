@@ -77,6 +77,8 @@ def _render_step(step: GenStep) -> list[Image.Image]:
         style = replace(RenderStyle(), current_fill="black") # deepskyblue
     # elif step.phase == "walk":
     #     style = replace(RenderStyle(), current_fill="purple")
+    # elif step.phase == "erase":
+    #     pass
     elif step.phase == "commit":
          style = replace(RenderStyle(), current_fill="limegreen")
     else:
@@ -92,6 +94,7 @@ def _render_step(step: GenStep) -> list[Image.Image]:
         junction = step.junction,
         cell_set_lookup=step.cell_set_lookup,
         carved=step.carved,
+        erased = step.erased,
     )
 
     return [frame]
@@ -113,25 +116,30 @@ FINAL_MS = 5000
 
 # durations in ms, keyed by the frame's kind
 def _build_phase_ms(size):
-    # When the size is 10 this is 80
-    # When the size is 20 this is 40
-    # When the size is 40 this is 20
+    # When size is 10 this is 80
+    # When size is 20 this is 40
+    # When size is 40 this is 20
     # Above that it is 20
     advance = max(20, 80 * 10 // size)
     # full-second flash on dead-end recognition when the size is 10
     dead_end = 250 + 10 - size * 2
     # Backtrack at twice the pace
     backtrack = max(20, advance // 2)
-    # When the size is 10 this is 60
-    # When the size is 20 this is 30
-    # Above that it is 20
-    walk = max(20, 60 * 10 // size)
+    # When size is 10 this is 120
+    # When size is 20 this is 60
+    # When size is 30 this is 40
+    # When size is 40 this is 30
+    # At 60 and above it is 20
+    walk = max(20, 120 * 10 // size)
+    commit = 1000
+    erase = 1000
     return {
             "advance":  advance,
             "dead_end": dead_end,
             "backtrack": backtrack,
             "walk": walk,
-            "commit": 1000
+            "commit": commit,
+            "erase": erase,
         }
 
 def _search_ms(size):
@@ -144,7 +152,7 @@ def main():
     render_mode = "gif"
     generate_mode = "wilson"
     solve_mode = "astar"
-    size = 25
+    size = 16
 
     build_phase_ms = _build_phase_ms(size)
     search_ms = _search_ms(size)
