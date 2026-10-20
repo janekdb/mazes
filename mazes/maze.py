@@ -281,6 +281,9 @@ def _walk_path(direction_from, start, head):
         path.append(c)
     return path
 
+# ~frames to SHOW per walk, however long it wandered
+WALK_BUDGET = 40
+
 def generate_wilson(size):
     m = Maze(size)
     yield GenStep(m)
@@ -291,20 +294,21 @@ def generate_wilson(size):
     while len(in_tree) < size * size:
         # any cell outside the tree. Randomised for visual appeal.
         start = random.choice([c for c in cells if c not in in_tree])
-        # start = next(c for c in cells if c not in in_tree)
         direction_from = {} # the loop-erasure trick
-
         # --- random walk until we hit the tree ---
         cell = start
+        # This walk's steps, in order
+        buf = []
         while cell not in in_tree:
             path = _walk_path(direction_from, start, cell)
-            yield GenStep(
+            gs = GenStep(
                 m,
                 visited=frozenset(in_tree),
                 stack=tuple(path),
                 current=cell,
                 phase="walk"
             )
+            buf.append(gs)
 
             dr, dc = random.choice([
                 (dr, dc) for dr, dc in DIRECTIONS
@@ -317,15 +321,24 @@ def generate_wilson(size):
             if nxt in path and len(path) - path.index(nxt) - 1 >= 4:
                 i = path.index(nxt)
                 erased = path[i:]            # the loop: everything after nxt, incl. cell
-                yield GenStep(m,
+                gs = GenStep(m,
                               visited=frozenset(in_tree),
                               stack=tuple(path + [nxt]),        # ← append pivot: closes the line + endcap on pivot        # full path still shown...
                               erased=frozenset(erased),    # ...with the loop bursting
                               current=cell,
                               phase="erase")
+                buf.append(gs)
 
             direction_from[cell] = (dr, dc)  # overwrite — last exit wins
             cell = nxt
+
+        # Flush: Keep every erase best, stride the walk frames
+        walk_idx = [k for k, s in enumerate(buf) if s.phase == "walk"]
+        stride = max(1, len(walk_idx) // WALK_BUDGET)
+        keep = set(walk_idx[::stride]) | {walk_idx[0], walk_idx[-1]}
+        for k, step in enumerate(buf):
+            if step.phase == "erase" or k in keep:
+                yield step
 
         # --- commit: carve the whole loop-erased path, then flash it ---
         path = _walk_path(direction_from, start, cell)   # start → tree-contact
