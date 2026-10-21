@@ -152,7 +152,7 @@ def main():
     render_mode = "gif"
     generate_mode = "wilson"
     solve_mode = "astar"
-    size = 16
+    size = 20
 
     build_phase_ms = _build_phase_ms(size)
     search_ms = _search_ms(size)
