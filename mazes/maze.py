@@ -2,6 +2,7 @@ import random
 from dataclasses import dataclass
 from collections.abc import Mapping
 from itertools import pairwise
+import bisect
 
 Cell = tuple[int, int]
 
@@ -283,6 +284,10 @@ def _walk_path(direction_from, start, head):
 
 # ~frames to SHOW per walk, however long it wandered
 WALK_BUDGET = 40
+# Walk frames to keep before the loop's entry cell
+LEAD_IN = 5
+# Show at most this number of final cells in the walk that forms a loop
+LOOP_CAP = 10
 
 def generate_wilson(size):
     m = Maze(size)
@@ -332,10 +337,20 @@ def generate_wilson(size):
             direction_from[cell] = (dr, dc)  # overwrite — last exit wins
             cell = nxt
 
-        # Flush: Keep every erase best, stride the walk frames
+        # Flush: Keep every erase beat, stride the walk frames
         walk_idx = [k for k, s in enumerate(buf) if s.phase == "walk"]
         stride = max(1, len(walk_idx) // WALK_BUDGET)
         keep = set(walk_idx[::stride]) | {walk_idx[0], walk_idx[-1]}
+
+        for e, step in enumerate(buf):
+            if step.phase == "erase":
+                # span = len(step.erased) + LEAD_IN # loop cells + 5 before entry
+                j = bisect.bisect_left(walk_idx, e) # walk_idx[:j] precede the erase
+                # keep.update(walk_idx[max(0, j - span): j])
+                entry = j - len(step.erased)  # entry cell's frame sits len(erased) back from the erase
+                keep.update(walk_idx[max(0, entry - LEAD_IN): max(0, entry)])  # lead-in before entry
+                keep.update(walk_idx[max(0, j - min(len(step.erased), LOOP_CAP)): j])  # last LOOP_CAP loop frames
+
         for k, step in enumerate(buf):
             if step.phase == "erase" or k in keep:
                 yield step
