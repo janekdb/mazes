@@ -61,22 +61,22 @@ def _test_is_spanning_tree(m, size):
 
 def test_kruskal_is_spanning_tree():
     size = 5
-    m, _ = list(generate_kruskal(size))[-1].maze # exhaust generator, take final maze
+    m = list(generate_kruskal(size))[-1].maze # exhaust generator, take final maze
     _test_is_spanning_tree(m, size)
 
 def test_binary_tree_is_spanning_tree():
     size = 5
-    m, _ = list(generate_kruskal(size))[-1].maze  # exhaust generator, take final maze
+    m = list(generate_kruskal(size))[-1].maze  # exhaust generator, take final maze
     _test_is_spanning_tree(m, size)
 
 def test_backtracker_is_spanning_tree():
     size = 5
-    m, _ = list(generate_backtracker(size))[-1].maze  # exhaust generator, take final maze
+    m = list(generate_backtracker(size))[-1].maze  # exhaust generator, take final maze
     _test_is_spanning_tree(m, size)
 
 def test_wilson_is_spanning_tree():
     size = 5
-    m, _ = list(generate_wilson(size))[-1].maze  # exhaust generator, take final maze
+    m = list(generate_wilson(size))[-1].maze  # exhaust generator, take final maze
     _test_is_spanning_tree(m, size)
 
 
