@@ -288,10 +288,20 @@ WALK_BUDGET = 40
 LEAD_IN = 5
 # Show at most this number of final cells in the walk that forms a loop
 LOOP_CAP = 10
+# Hide walks whose committed corridor is this many cells or fewer (including the tree-contact cell)
+COMMIT_MIN = 2
+# smallest loop (in cells) that gets an erase beat
+MIN_LOOP = 6
 
 def generate_wilson(size):
     m = Maze(size)
     yield GenStep(m)
+
+    walk_budget = max(5, WALK_BUDGET * 10 // size)   # 10→40, 20→20, 30→13, 40→10, 60→6, 80→5
+
+    lead_in = max(1, min(LEAD_IN, 6 - (size - 1) // 10))
+    loop_cap = max(3, LOOP_CAP * 20 // size)  # ≤20→10, 30→6, 40→5, 60→3, 80→3
+    min_loop = max(MIN_LOOP, 2 * (size // 10))  # ≤30→6, 40→8, 60→12, 80→16
 
     cells = [(r, c) for r in range(size) for c in range(size)]
     in_tree = {random.choice(cells)} # seed the tree with one cell
@@ -322,8 +332,8 @@ def generate_wilson(size):
             nxt = (cell[0] + dr, cell[1] + dc)
 
             # stepping onto the path → loop erased
-            # loop of ≥4 cells:
-            if nxt in path and len(path) - path.index(nxt) - 1 >= 4:
+            # only for loops of a minimum cell count
+            if nxt in path and len(path) - path.index(nxt) >= min_loop:
                 i = path.index(nxt)
                 erased = path[i:]            # the loop: everything after nxt, incl. cell
                 gs = GenStep(m,
@@ -337,58 +347,43 @@ def generate_wilson(size):
             direction_from[cell] = (dr, dc)  # overwrite — last exit wins
             cell = nxt
 
-        # Flush: Keep every erase beat, stride the walk frames
-        walk_idx = [k for k, s in enumerate(buf) if s.phase == "walk"]
-        stride = max(1, len(walk_idx) // WALK_BUDGET)
-        keep = set(walk_idx[::stride]) | {walk_idx[0], walk_idx[-1]}
+        # Final loop-erased path: start -> tree contact. Known now: direction_from is final
+        path = _walk_path(direction_from, start, cell)   # start → tree-contact
+        had_erase = any(s.phase == "erase" for s in buf)
+        trivial = len(path) <= COMMIT_MIN and not had_erase
 
-        for e, step in enumerate(buf):
-            if step.phase == "erase":
-                # span = len(step.erased) + LEAD_IN # loop cells + 5 before entry
-                j = bisect.bisect_left(walk_idx, e) # walk_idx[:j] precede the erase
-                # keep.update(walk_idx[max(0, j - span): j])
-                entry = j - len(step.erased)  # entry cell's frame sits len(erased) back from the erase
-                keep.update(walk_idx[max(0, entry - LEAD_IN): max(0, entry)])  # lead-in before entry
-                keep.update(walk_idx[max(0, j - min(len(step.erased), LOOP_CAP)): j])  # last LOOP_CAP loop frames
+        if not trivial:
+            # Flush: Keep every erase beat, stride the walk frames
+            walk_idx = [k for k, s in enumerate(buf) if s.phase == "walk"]
+            stride = max(1, len(walk_idx) // walk_budget)
+            keep = set(walk_idx[::stride]) | {walk_idx[0], walk_idx[-1]}
 
-        for k, step in enumerate(buf):
-            if step.phase == "erase" or k in keep:
-                yield step
+            for e, step in enumerate(buf):
+                if step.phase == "erase":
+                    # span = len(step.erased) + LEAD_IN # loop cells + 5 before entry
+                    j = bisect.bisect_left(walk_idx, e) # walk_idx[:j] precede the erase
+                    # keep.update(walk_idx[max(0, j - span): j])
+                    entry = j - len(step.erased)  # entry cell's frame sits len(erased) back from the erase
+                    keep.update(walk_idx[max(0, entry - lead_in): max(0, entry)])  # lead-in before entry
+                    keep.update(walk_idx[max(0, j - min(len(step.erased), loop_cap)): j])  # last loop_cap loop frames
+
+            for k, step in enumerate(buf):
+                if step.phase == "erase" or k in keep:
+                    yield step
 
         # --- commit: carve the whole loop-erased path, then flash it ---
-        path = _walk_path(direction_from, start, cell)   # start → tree-contact
         for a, b in pairwise(path):
             m.link_cells(a, b)
             in_tree.add(a)
-        # one bright beat on the freshly carved corridor
-        yield GenStep(
-            m,
-            visited=frozenset(in_tree),
-            stack=tuple(path),
-            carved=frozenset(path),
-            phase="commit",
-        )
-        #
-        # # --- commit: carve the loop-erased path into the tree, one edge per frame ---
-        # path = _walk_path(direction_from, start, cell)   # start → tree-contact cell
-        # for a, b in pairwise(path):
-        #     m.link_cells(a, b)
-        #     in_tree.add(a)
-        #     yield GenStep(
-        #         m,
-        #         visited=frozenset(in_tree),
-        #         current=b,
-        #         stack=tuple(path),          # whole committed corridor, highlighted
-        #         phase="commit",
-        #     )
-        #
-        # # --- retrace the loop-erased path and carve it ---
-        # cell = start
-        # while cell not in in_tree:
-        #     dr, dc = direction_from[cell]
-        #     nxt = (cell[0] + dr, cell[1] + dc)
-        #     m.link_cells(cell, nxt)
-        #     in_tree.add(cell)
-        #     cell = nxt
+
+        if not trivial:
+            # one bright beat on the freshly carved corridor
+            yield GenStep(
+                m,
+                visited=frozenset(in_tree),
+                stack=tuple(path),
+                carved=frozenset(path),
+                phase="commit",
+            )
 
     yield GenStep(m)  # placeholder: one final frame; real animation comes in stage 2
