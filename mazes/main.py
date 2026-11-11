@@ -132,7 +132,7 @@ def _build_phase_ms(size):
     # At 60 and above it is 20
     walk = max(20, 120 * 10 // size)
     commit = 1000
-    erase = 1000
+    erase = min(1000, 1000 * 20 // size)
     return {
             "advance":  advance,
             "dead_end": dead_end,
@@ -152,7 +152,7 @@ def main():
     render_mode = "gif"
     generate_mode = "wilson"
     solve_mode = "astar"
-    size = 20
+    size = 60
 
     build_phase_ms = _build_phase_ms(size)
     search_ms = _search_ms(size)
